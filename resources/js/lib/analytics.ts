@@ -9,9 +9,10 @@ declare global {
 const GUEST_VISIT_TRACKED = 'devnull:guest-visit-tracked';
 
 /**
- * The two Fathom events behind the conversion rate of the Metrics tab: a visit by someone not signed in, once per
- * browser session, and a signup, right after an account is created. Both come from Fathom, so ad blockers hide the
- * same share of each and the rate between them holds. Fathom's deferred script runs before the app's module script,
+ * The Fathom events behind the Metrics tab: a visit by someone not signed in, once per browser session, with where it
+ * started when that is a profile or a commit (the team's or a member's), for the conversion and referral rates; and a
+ * signup, right after an account is created. All come from Fathom, so ad blockers hide the same share of each and the
+ * rates between them hold. Fathom's deferred script runs before the app's module script,
  * so it is ready by then, unless it is blocked or left out outside production, and then nothing is sent.
  */
 export function trackAnalyticsEvents(): void {
@@ -31,6 +32,12 @@ export function trackAnalyticsEvents(): void {
         }
 
         window.fathom?.trackEvent('guest-visit');
+
+        const entry = event.detail.page.props.referralEntry;
+
+        if (entry) {
+            window.fathom?.trackEvent(`referral-${entry}`);
+        }
     });
 
     router.on('flash', (event) => {

@@ -8,7 +8,7 @@ Status: **implemented** metrics are on the Metrics tab. **Not yet** metrics are 
 
 ## Principles
 
-- **Store as little as possible.** Most metrics are computed from data the app already has (users, commits, stars, bookmarks, follows) and from Fathom, which is anonymous. Only three things were added for metrics: the last day each person was seen, one anonymous count of active people per day, and two anonymous Fathom events for the conversion rate.
+- **Store as little as possible.** Most metrics are computed from data the app already has (users, commits, stars, bookmarks, follows) and from Fathom, which is anonymous. Only three things were added for metrics: the last day each person was seen, one anonymous count of active people per day, and a few anonymous Fathom events for the conversion and referral rates.
 - **No personal attribution.** Nobody's referrer, landing page or campaign is stored. Where people come from is read from Fathom, in aggregate.
 - **Bots are left out** everywhere: Tom and @world (`User::BOT_GITHUB_IDS`).
 - **The team is the admins** (`ADMINS`), when a metric needs to tell the team's content from everyone else's.
@@ -22,7 +22,7 @@ Each answers the three questions of the [data guidelines](.ai/guidelines/data.bl
 |---|---|---|---|---|
 | The last day a person was seen (a date, no time) | `users.last_seen_at`, hidden | Retention and active users can't be derived from anything else: reading alone leaves no trace. Written at most once a day, without touching `updated_at`. | Admins, only as aggregates on the Metrics tab; the person in their export | With the account |
 | The number of people seen each day | `active_user_counts` (`seen_at`, `count`), no user ids | The daily active users history: `last_seen_at` only keeps each person's latest day, so past days can't be recomputed. Incremented the first time each person is seen in a day, so the count is exact. | Admins, on the Metrics tab | Never: it is an anonymous count |
-| Two anonymous events, `guest-visit` and `signup` | Fathom | The conversion rate, counted on both sides by the same tool. No user id is sent. | Admins, through Fathom | Per Fathom's retention |
+| Anonymous events: `guest-visit`, `referral-member`, `referral-team` and `signup` | Fathom | The conversion and referral rates, counted on both sides by the same tool. No user id is sent. | Admins, through Fathom | Per Fathom's retention |
 
 **Seen** means signed in and opening a page or doing something (starring, replying, following) on the web or the installed app, or using the API from the mobile app or the terminal. Posts automated with the GitHub Action count too: someone who publishes, even automatically, is active. What a page reads on its own (polling for notifications, partial reloads, prefetches, JSON reads) doesn't count, or a tab left open would keep its owner active forever.
 
@@ -71,9 +71,10 @@ The funnel follows the people who **signed up in the selected range** (all time 
 
 ### Referral
 
-- **Referral**: visits from outside that **start on a member's profile or commit**, rather than on the team's (the admins). When it rises, members bring people in, not us.
-- **Referral rate** = visits starting on a member's profile or commit ÷ visits starting on any profile or commit.
-- Source: Fathom, filtered by entry page with a regular expression (`^/@[^/]+(/commits/[^/]+)?/?$` for all profiles and commits, the same restricted to the admins' usernames for the team). Direct visits count: links shared in Slack, Discord or messaging apps often lose their referrer, and nobody types a commit's id by hand.
+- **Referral**: people **not signed in** whose visit **starts on a member's profile or commit**, rather than on the team's (the admins). When it rises, members bring new people in, not us. People already signed in don't count: they are not being brought in.
+- **Referral rate** = people whose visit started on a member's profile or commit ÷ people whose visit started on any profile or commit.
+- Source: Fathom events. On the first page of a session of someone not signed in, the server tells the page whether it is a profile or commit (`/@user/...`) of the team or of a member, and the browser sends `referral-team` or `referral-member` along with `guest-visit`. The admins list never reaches the browser, only the kind of the page being viewed. Direct visits count: links shared in Slack, Discord or messaging apps often lose their referrer, and nobody types a commit's id by hand.
+- The events only exist since the release that added them; the rate reads "–" before.
 - Why it is not a slice of the funnel: it counts **visits**, from every cohort, not people of the signup cohort. Drawn as the next slice, it would read "x% of retained people referred someone", which is not measured (that would need to store who brought whom).
 - Not measured: whether those visitors sign up. Fathom doesn't link a visit to a signup.
 

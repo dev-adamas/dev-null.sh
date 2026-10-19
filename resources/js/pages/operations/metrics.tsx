@@ -307,10 +307,10 @@ function FunnelValue({ funnel }: { funnel: Funnel }) {
                 </div>
             </div>
             <Definition title="Referral">
-                Visits from outside that start on a member's profile or commit
-                rather than the team's: when it rises, members bring people in,
-                not us. Referral rate = member visits ÷ visits starting on a
-                profile or commit.
+                People not signed in who arrive on a member's profile or commit
+                rather than the team's: when it rises, members bring new people
+                in, not us. Referral rate = arrivals on members' ÷ arrivals on
+                any profile or commit, counted by Fathom.
             </Definition>
         </div>
     );

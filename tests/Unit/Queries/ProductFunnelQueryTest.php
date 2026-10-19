@@ -154,19 +154,15 @@ it('has no retention before tracking started, or before signups got through thei
         ->retention_full_on->toBe('2026-11-02');
 });
 
-it('counts visitors and conversion from Fathom events, and splits outside visits between members and the team', function (): void {
+it('counts visitors, conversion and referral from the Fathom events of guests', function (): void {
     config(['app.admins' => ['nunomaduro', 'mnapoli'], 'services.fathom.token' => 'token', 'services.fathom.site_id' => 'SITE']);
 
-    Http::fake(function (Request $request) {
-        $filters = $request->data()['filters'] ?? null;
-
-        return Http::response([match (true) {
-            ($request->data()['entity_name'] ?? null) === 'guest-visit' => ['unique_conversions' => '400'],
-            ($request->data()['entity_name'] ?? null) === 'signup' => ['unique_conversions' => '3'],
-            str_contains((string) $filters, 'nunomaduro|mnapoli') => ['visits' => '30'],
-            default => ['visits' => '50'],
-        }]);
-    });
+    Http::fake(fn (Request $request) => Http::response([['unique_conversions' => match ($request->data()['entity_name'] ?? null) {
+        'guest-visit' => '400',
+        'signup' => '3',
+        'referral-member' => '20',
+        'referral-team' => '30',
+    }]]));
 
     User::factory()->count(4)->create(['created_at' => '2026-10-02 00:00:00']);
 
@@ -176,9 +172,6 @@ it('counts visitors and conversion from Fathom events, and splits outside visits
         ->referral->toBe(['members' => 20, 'team' => 30])
         ->rates->conversion->toBe(0.0075)
         ->rates->referral->toBe(0.4);
-
-    Http::assertSent(fn (Request $request): bool => ($request->data()['aggregates'] ?? null) === 'visits'
-        && json_decode((string) $request->data()['filters'], true) === [['property' => 'entry_page', 'operator' => 'matching', 'value' => '^/@[^/]+(/commits/[^/]+)?/?$']]);
 });
 
 it('has no visitors, conversion or referral without Fathom', function (): void {
@@ -254,7 +247,7 @@ it('stops asking Fathom once it has no answer', function (): void {
 it('has no referral without admins to tell the team apart', function (): void {
     config(['app.admins' => [], 'services.fathom.token' => 'token', 'services.fathom.site_id' => 'SITE']);
 
-    Http::fake(['api.usefathom.com/*' => Http::response([['unique_conversions' => '10', 'visits' => '10']])]);
+    Http::fake(['api.usefathom.com/*' => Http::response([['unique_conversions' => '10']])]);
 
     expect(($this->funnel)())
         ->visitors->toBe(10)

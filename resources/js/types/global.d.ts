@@ -22,6 +22,7 @@ declare module '@inertiajs/core' {
             showsWhoToFollow: boolean;
             dimsLanes: boolean;
             repliesPerPage: number;
+            referralEntry: 'team' | 'member' | null;
             suggestedUsers?: SuggestedUser[];
             [key: string]: unknown;
         };

@@ -44,6 +44,7 @@ final class HandleInertiaRequests extends Middleware
         $isAdmin = $request->user()?->isAdmin() ?? false;
         $user = $request->user();
         $showsWhoToFollow = $user instanceof User && $request->cookie('who_to_follow') !== 'false';
+        $author = $request->route('user');
 
         return [
             ...parent::share($request),
@@ -70,6 +71,8 @@ final class HandleInertiaRequests extends Middleware
             'showsWhoToFollow' => $showsWhoToFollow,
             'dimsLanes' => $request->cookie('lane_dimming') !== 'false',
             'repliesPerPage' => RepliesPerPage::of($request)->value,
+            // For the referral metric, whose profile or commit a guest is on: the team's (the admins) or a member's...
+            'referralEntry' => $user === null && $author instanceof User ? ($author->isAdmin() ? 'team' : 'member') : null,
             // Onboarding has no sidebar to show them in, and the people followed during it change who is suggested.
             ...$user instanceof User && $showsWhoToFollow && ! $request->routeIs('onboarding.show') ? [
                 'suggestedUsers' => Inertia::defer(fn (): Collection => resolve(SuggestedUsersQuery::class)->get(

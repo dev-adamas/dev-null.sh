@@ -24,6 +24,14 @@ final readonly class ProductFunnelQuery
 
     private const string SIGNUP_EVENT = 'signup';
 
+    /**
+     * The Fathom events the browser sends along with a guest visit that started on a member's or the team's profile or
+     * commit.
+     */
+    private const string MEMBER_REFERRAL_EVENT = 'referral-member';
+
+    private const string TEAM_REFERRAL_EVENT = 'referral-team';
+
     public function __construct(private FathomTrafficQuery $traffic)
     {
         //
@@ -233,26 +241,21 @@ final readonly class ProductFunnelQuery
     }
 
     /**
-     * Visits from outside that started on a profile or a commit, split between the team's, the admins, and everyone
-     * else's, or null when Fathom has no answer, or when there are no admins to tell the team apart.
+     * The visitors not signed in who arrived on a profile or a commit, split between the team's, the admins, and
+     * everyone else's, or null when Fathom has no answer, or when there are no admins to tell the team apart.
      *
      * @return array{members: int, team: int}|null
      */
     private function referral(CarbonImmutable $from, CarbonImmutable $to): ?array
     {
-        /** @var list<string> $admins */
-        $admins = config('app.admins');
-
-        if ($admins === []) {
+        if (config('app.admins') === []) {
             return null;
         }
 
-        $team = implode('|', array_map(fn (string $username): string => preg_quote($username, '/'), $admins));
+        $members = $this->traffic->eventVisitors($from, $to, self::MEMBER_REFERRAL_EVENT);
+        $team = $this->traffic->eventVisitors($from, $to, self::TEAM_REFERRAL_EVENT);
 
-        $content = $this->traffic->entries($from, $to, '^/@[^/]+(/commits/[^/]+)?/?$');
-        $teamContent = $this->traffic->entries($from, $to, "(?i)^/@({$team})(/commits/[^/]+)?/?$");
-
-        return $content === null || $teamContent === null ? null : ['members' => $content - $teamContent, 'team' => $teamContent];
+        return $members === null || $team === null ? null : ['members' => $members, 'team' => $team];
     }
 
     /**
